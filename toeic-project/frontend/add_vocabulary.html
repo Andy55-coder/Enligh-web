@@ -49,7 +49,7 @@
     <div class="main-container">
         <div class="form-section">
             <h3>➕ 建立新字卡</h3>
-            <div id="successMessage" class="success-msg">🎉 字卡成功儲存至雲端資料庫！</div>
+            <div id="successMessage" class="success-msg">🎉 字卡成功儲存至專屬雲端空間！</div>
             
             <div class="form-group">
                 <label>英文單字</label>
@@ -110,6 +110,13 @@
         }
 
         async function submitNewCard() {
+            const username = localStorage.getItem('toeic_username');
+            if (!username) {
+                alert("請先登入系統才能建立專屬字卡！");
+                window.location.href = "login.html";
+                return;
+            }
+
             const word = document.getElementById('inputWord').value.trim();
             const part = document.getElementById('inputPart').value;
             const meaning = document.getElementById('inputMeaning').value.trim();
@@ -127,17 +134,15 @@
                 const response = await fetch(`${API_URL}/api/vocabulary`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ word, part, meaning, example })
+                    body: JSON.stringify({ username, word, part, meaning, example })
                 });
 
                 if (!response.ok) throw new Error("儲存失敗");
 
-                // 顯示成功提示
                 const msg = document.getElementById('successMessage');
                 msg.style.display = 'block';
                 setTimeout(() => { msg.style.display = 'none'; }, 3000);
                 
-                // 清空表單
                 document.getElementById('inputWord').value = '';
                 document.getElementById('inputMeaning').value = '';
                 document.getElementById('inputExample').value = '';

@@ -1,19 +1,46 @@
-from flask import Flask, jsonify, request
+import os
+import json
+from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-app = Flask(__name__)
-CORS(app) 
+# ==========================================
+# 1. 告訴 Flask 去外層的 frontend 資料夾找 HTML
+# ==========================================
+base_dir = os.path.dirname(os.path.abspath(__file__))
+template_dir = os.path.join(base_dir, '..', 'frontend')
 
-# 1. 讀取金鑰，連線至 Firestore
-cred = credentials.Certificate("serviceAccountKey.json")
-firebase_admin.initialize_app(cred)
+app = Flask(__name__, template_folder=template_dir)
+CORS(app)
+
+# ==========================================
+# 2. 讀取金鑰，連線至 Firestore (支援 Vercel 與本地端)
+# ==========================================
+firebase_credentials = os.environ.get('FIREBASE_SERVICE_ACCOUNT')
+
+if firebase_credentials:
+    # 這是 Vercel 環境：從環境變數讀取
+    cred_dict = json.loads(firebase_credentials)
+    cred = credentials.Certificate(cred_dict)
+else:
+    # 這是本地端環境：明確指定去 backend 資料夾下找檔案
+    key_path = os.path.join(base_dir, "serviceAccountKey.json")
+    cred = credentials.Certificate(key_path)
+
+# 初始化 Firebase
+if not firebase_admin._apps:
+    firebase_admin.initialize_app(cred)
+
 db = firestore.client()
 
 # ==========================================
-# [新增] 使用者註冊系統
+# 使用者註冊系統
 # ==========================================
+@app.route('/vocabulary')
+def vocabulary():
+    return render_template('vocabulary.html')
+
 @app.route('/api/register', methods=['POST'])
 def register():
     try:
@@ -28,19 +55,19 @@ def register():
         if user_ref.get().exists:
             return jsonify({"success": False, "msg": "此使用者帳號已被註冊"}), 400
             
-        # 建立使用者核心紀錄與初始零進度結構
         user_ref.set({
             "password": password,
             "exp": 0,
             "completedChapters": [],
-            "completedHardMode": []
+            "completedHardMode": [],
+            "activeProgress": {}  
         })
         return jsonify({"success": True, "msg": "帳號註冊成功！請進行登入。"}), 201
     except Exception as e:
         return jsonify({"success": False, "msg": str(e)}), 500
 
 # ==========================================
-# [新增] 使用者登入系統
+# 使用者登入系統
 # ==========================================
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -64,7 +91,7 @@ def login():
         return jsonify({"success": False, "msg": str(e)}), 500
 
 # ==========================================
-# [新增] 讀取雲端進度 API
+# 讀取與儲存雲端進度 API
 # ==========================================
 @app.route('/api/get_progress', methods=['POST'])
 def get_progress():
@@ -80,12 +107,10 @@ def get_progress():
     return jsonify({
         "exp": user_data.get('exp', 0),
         "completedChapters": user_data.get('completedChapters', []),
-        "completedHardMode": user_data.get('completedHardMode', [])
+        "completedHardMode": user_data.get('completedHardMode', []),
+        "activeProgress": user_data.get('activeProgress', {}) 
     }), 200
 
-# ==========================================
-# [新增] 儲存進度同步 API
-# ==========================================
 @app.route('/api/save_progress', methods=['POST'])
 def save_progress():
     try:
@@ -96,18 +121,18 @@ def save_progress():
         if not user_ref.get().exists:
             return jsonify({"success": False, "msg": "使用者未註冊"}), 404
             
-        # 將前端最新計算完成的數據複寫回雲端專屬文件
         user_ref.update({
             "exp": data.get('exp', 0),
             "completedChapters": data.get('completedChapters', []),
-            "completedHardMode": data.get('completedHardMode', [])
+            "completedHardMode": data.get('completedHardMode', []),
+            "activeProgress": data.get('activeProgress', {}) 
         })
-        return jsonify({"success": True, "msg": "雲端進度儲存成功"}), 200
+        return jsonify({"success": True, "msg": "雲端進度同步成功"}), 200
     except Exception as e:
         return jsonify({"success": False, "msg": str(e)}), 500
 
 # ==========================================
-# API：取得文法章節
+# API：取得文法章節與對答案系統
 # ==========================================
 @app.route('/api/lessons', methods=['GET'])
 def get_lessons():
@@ -128,9 +153,6 @@ def get_lessons():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ==========================================
-# API：對答案系統
-# ==========================================
 @app.route('/api/check_answer', methods=['POST'])
 def check_answer():
     data = request.json
@@ -164,41 +186,62 @@ def check_answer():
         return jsonify({"correct": False, "msg": "答錯囉！"}), 200
 
 # ==========================================
-# API：取得單字卡資料
+# API：取得單字卡資料 (全域百大 + 個人專屬)
 # ==========================================
 @app.route('/api/vocabulary', methods=['GET'])
 def get_vocabulary():
     try:
-        docs = db.collection("vocabulary").stream()
+        username = request.args.get('username')
         words = []
+        
+        # 1. 取得全域百大單字
+        docs = db.collection("vocabulary").stream()
         for doc in docs:
             data = doc.to_dict()
             data['id'] = doc.id
+            data['type'] = 'global'
             words.append(data)
+            
+        # 2. 取得使用者專屬單字 (子集合)
+        if username:
+            user_words_ref = db.collection("users").document(username).collection("my_words").stream()
+            for doc in user_words_ref:
+                data = doc.to_dict()
+                data['id'] = doc.id
+                data['type'] = 'private'
+                words.append(data)
+
         return jsonify(words), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 # ==========================================
-# API：儲存自訂單字卡
+# API：儲存自訂單字卡 (存入個人的子集合)
 # ==========================================
 @app.route('/api/vocabulary', methods=['POST'])
 def add_vocabulary():
     try:
         data = request.json
+        username = data.get('username', '').strip()
         word = data.get('word', '').strip()
         part = data.get('part', '').strip()
         meaning = data.get('meaning', '').strip()
         example = data.get('example', '').strip()
 
+        if not username:
+            return jsonify({"error": "未登入，無法新增專屬單字"}), 401
         if not word or not meaning:
             return jsonify({"error": "欄位必填"}), 400
 
         new_vocab = {
-            "word": word, "part": part if part else "n.", "meaning": meaning, "example": example if example else ""
+            "word": word, 
+            "part": part if part else "n.", 
+            "meaning": meaning, 
+            "example": example if example else ""
         }
-        doc_ref = db.collection("vocabulary").document()
-        doc_ref.set(new_vocab)
+        
+        # 存入 users -> {username} -> my_words
+        db.collection("users").document(username).collection("my_words").document().set(new_vocab)
         return jsonify({"success": True}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500

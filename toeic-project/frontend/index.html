@@ -28,10 +28,19 @@
         .workspace { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); min-height: 50vh; }
         .grammar-box { background: #eef5ff; padding: 20px; border-left: 5px solid #2a5298; border-radius: 8px; margin-bottom: 25px; line-height: 1.8; }
         .badge { background: #dcfce7; color: #16a34a; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; }
-        .option-label { display: block; padding: 12px 15px; margin-bottom: 10px; border: 2px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 1.1rem; }
-        .option-label:hover { background: #f8fafc; border-color: #cbd5e1; }
-        input[type="radio"] { margin-right: 10px; transform: scale(1.2); cursor: pointer; }
         
+        /* 選項 UI 與答題回饋樣式 */
+        .option-label { display: flex; align-items: center; padding: 12px 15px; margin-bottom: 10px; border: 2px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 1.1rem; background: white; }
+        .option-label:hover { background: #f8fafc; border-color: #cbd5e1; }
+        input[type="radio"] { margin-right: 12px; transform: scale(1.2); cursor: pointer; }
+        
+        /* 答對樣式：綠底綠框 */
+        .correct-option { background-color: #f0fdf4 !important; border-color: #22c55e !important; color: #15803d; }
+        /* 答錯樣式：紅底紅框 */
+        .wrong-option { background-color: #fef2f2 !important; border-color: #ef4444 !important; color: #b91c1c; }
+        /* 勾勾與叉叉的圖示區域 */
+        .feedback-icon { margin-left: auto; font-size: 1.2rem; }
+
         .btn-check { background: var(--primary); color: white; border: none; padding: 12px 25px; font-size: 1.1rem; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 20px; transition: 0.2s; width: 100%; max-width: 200px; }
         .btn-check:hover { background: #16a34a; }
         .btn-check:disabled { background: #94a3b8; cursor: not-allowed; }
@@ -66,7 +75,7 @@
 
         <div class="workspace" id="workspace">
             <h2>歡迎來到多益文法特訓營！</h2>
-            <p>請從左側選擇一個文法章節開始學習。<br>完成章節挑戰題即可獲得 EXP！</p>
+            <p>請從左側選擇一個文法章節開始學習。<br>每答對一題即可獲得 EXP，進度將即時自動存檔！</p>
         </div>
     </div>
 
@@ -78,7 +87,7 @@
         let currentMode = 'basic'; 
         let currentUsername = "";
         
-        let userProfile = { exp: 0, completedChapters: [], completedHardMode: [] };
+        let userProfile = { exp: 0, completedChapters: [], completedHardMode: [], activeProgress: {} };
 
         function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
@@ -88,17 +97,15 @@
             return array;
         }
 
-        // 系統初始化：安全過濾登入狀態
         async function initSystem() {
             currentUsername = localStorage.getItem('toeic_username');
             if (!currentUsername) {
-                window.location.href = "login.html"; // 強制導回登入頁
+                window.location.href = "login.html"; 
                 return;
             }
             document.getElementById('usernameDisplay').innerText = currentUsername;
 
             try {
-                // 1. 先向後端請求該帳號在雲端 Firestore 的進度資料
                 const progressRes = await fetch(`${API_URL}/api/get_progress`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -107,7 +114,6 @@
                 if (!progressRes.ok) throw new Error("讀取存檔失敗");
                 userProfile = await progressRes.json();
 
-                // 2. 載入題目資料庫
                 const response = await fetch(`${API_URL}/api/lessons`);
                 if (!response.ok) throw new Error("連線異常");
                 cloudDatabase = await response.json();
@@ -144,10 +150,18 @@
             });
         }
 
+        function restoreQuestionIndex() {
+            const chId = currentChapter.id;
+            if (!userProfile.activeProgress[chId]) {
+                userProfile.activeProgress[chId] = { "basic": 0, "hard": 0 };
+            }
+            currentQuestionIndex = userProfile.activeProgress[chId][currentMode] || 0;
+        }
+
         function loadWorkspace(ch) {
             currentChapter = ch;
-            currentQuestionIndex = 0; 
             currentMode = 'basic'; 
+            restoreQuestionIndex(); 
 
             const space = document.getElementById('workspace');
             space.innerHTML = `
@@ -178,7 +192,7 @@
             document.getElementById('btnBasic').onclick = () => {
                 if (currentMode === 'basic') return;
                 currentMode = 'basic';
-                currentQuestionIndex = 0;
+                restoreQuestionIndex(); 
                 renderModeToggle();
                 renderCurrentQuestion();
             };
@@ -186,7 +200,7 @@
             document.getElementById('btnHard').onclick = () => {
                 if (currentMode === 'hard') return;
                 currentMode = 'hard';
-                currentQuestionIndex = 0;
+                restoreQuestionIndex(); 
                 renderModeToggle();
                 renderCurrentQuestion();
             };
@@ -201,6 +215,8 @@
                 return;
             }
 
+            if (currentQuestionIndex >= questions.length) currentQuestionIndex = 0;
+
             const currentQuiz = questions[currentQuestionIndex];
             let cleanOptions = currentQuiz.options.map(opt => opt.substring(3));
             cleanOptions = shuffleArray(cleanOptions);
@@ -208,12 +224,14 @@
             const letters = ["A", "B", "C", "D"];
             let finalOptionsHTML = "";
 
+            // 加入 feedback-icon 的 span 標籤
             cleanOptions.forEach((text, index) => {
                 const currentLetter = letters[index];
                 finalOptionsHTML += `
                     <label class="option-label">
                         <input type="radio" name="quiz" value="${text}"> 
-                        <strong>${currentLetter})</strong> ${text}
+                        <strong>${currentLetter})&nbsp;</strong> <span>${text}</span>
+                        <span class="feedback-icon"></span>
                     </label>
                 `;
             });
@@ -231,10 +249,29 @@
             document.getElementById('checkBtn').onclick = () => checkAnswer(currentChapter.id);
         }
 
+        async function syncProgressToCloud() {
+            try {
+                await fetch(`${API_URL}/api/save_progress`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: currentUsername,
+                        exp: userProfile.exp,
+                        completedChapters: userProfile.completedChapters,
+                        completedHardMode: userProfile.completedHardMode,
+                        activeProgress: userProfile.activeProgress 
+                    })
+                });
+            } catch (error) {
+                console.error("即時同步失敗:", error);
+            }
+        }
+
         async function checkAnswer(chId) {
             const selected = document.querySelector('input[name="quiz"]:checked');
             if (!selected) return alert("請先選擇一個答案！");
 
+            const selectedLabel = selected.parentElement; // 取得外層的 label 以便上色
             const checkBtn = document.getElementById('checkBtn');
             checkBtn.innerText = "批改中...";
             checkBtn.disabled = true;
@@ -254,51 +291,53 @@
                 const result = await response.json();
 
                 if (result.correct) {
+                    // --- 答對了：上綠色與打勾 ---
+                    selectedLabel.classList.add('correct-option');
+                    selectedLabel.querySelector('.feedback-icon').innerText = '✅';
                     document.querySelectorAll('input[name="quiz"]').forEach(input => input.disabled = true);
+                    
                     const actionArea = document.getElementById('actionArea');
                     const questions = currentMode === 'hard' ? currentChapter.hard_questions : currentChapter.questions;
 
+                    let points = currentMode === 'hard' ? 10 : 5;
+                    userProfile.exp += points;
+
+                    if (!userProfile.activeProgress[chId]) {
+                        userProfile.activeProgress[chId] = { "basic": 0, "hard": 0 };
+                    }
+
                     if (currentQuestionIndex + 1 < questions.length) {
-                        actionArea.innerHTML = `<button id="nextBtn" class="btn-check" style="background:#2563eb;">下一題</button>`;
+                        currentQuestionIndex++;
+                        userProfile.activeProgress[chId][currentMode] = currentQuestionIndex; 
+
+                        // 取代原有的 alert，直接顯示下一題按鈕
+                        actionArea.innerHTML = `<button id="nextBtn" class="btn-check" style="background:#2563eb;">下一題 ➔</button>`;
                         document.getElementById('nextBtn').onclick = () => {
-                            currentQuestionIndex++;
                             renderCurrentQuestion();
                         };
                     } else {
-                        // 通關加分
+                        // 破關結算
                         if (currentMode === 'basic') {
-                            alert("🏆 恭喜！你成功通關基礎題目！進度已同步至雲端。");
-                            if (!userProfile.completedChapters.includes(chId)) {
-                                userProfile.completedChapters.push(chId);
-                                userProfile.exp += 100;
-                            }
+                            alert("🏆 恭喜！你成功通關基礎模式所有題目！");
+                            if (!userProfile.completedChapters.includes(chId)) userProfile.completedChapters.push(chId);
                         } else {
-                            alert("🔥 終極挑戰達成！你成功征服了困難模式！進度已同步至雲端。");
-                            if (!userProfile.completedHardMode.includes(chId)) {
-                                userProfile.completedHardMode.push(chId);
-                                userProfile.exp += 200;
-                            }
+                            alert("🔥 終極挑戰達成！你成功征服了困難模式所有題目！");
+                            if (!userProfile.completedHardMode.includes(chId)) userProfile.completedHardMode.push(chId);
                         }
                         
-                        actionArea.innerHTML = `<p style="color:var(--primary); font-weight:bold; font-size:1.2rem;">本模式挑戰成功！</p>`;
-                        
-                        // 【關鍵：上傳最新狀態至雲端資料庫】
-                        await fetch(`${API_URL}/api/save_progress`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                username: currentUsername,
-                                exp: userProfile.exp,
-                                completedChapters: userProfile.completedChapters,
-                                completedHardMode: userProfile.completedHardMode
-                            })
-                        });
-
-                        updateDashboard();
-                        renderChapters();
+                        userProfile.activeProgress[chId][currentMode] = 0;
+                        actionArea.innerHTML = `<p style="color:var(--primary); font-weight:bold; font-size:1.2rem;">🎉 本模式挑戰成功！</p>`;
                     }
+
+                    await syncProgressToCloud();
+                    updateDashboard();
+                    renderChapters();
                 } else {
-                    alert("❌ 答錯了，再看一次題目挑戰看看！");
+                    // --- 答錯了：上紅色與叉叉 ---
+                    selectedLabel.classList.add('wrong-option');
+                    selectedLabel.querySelector('.feedback-icon').innerText = '❌';
+                    selected.disabled = true; // 讓這個錯的選項變灰不能再點
+                    
                     checkBtn.innerText = "再試一次";
                     checkBtn.disabled = false;
                 }
@@ -310,8 +349,8 @@
         }
 
         function logout() {
-            localStorage.removeItem('toeic_username'); // 刪除登入憑證
-            window.location.href = "login.html"; // 退回登入頁
+            localStorage.removeItem('toeic_username'); 
+            window.location.href = "login.html"; 
         }
 
         window.onload = initSystem;
