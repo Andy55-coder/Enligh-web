@@ -7,62 +7,78 @@
     <style>
         :root { --primary: #22c55e; --dark: #0f172a; --bg: #f8fafc; }
         body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; line-height: 1.6; }
-        .nav-bar { background: var(--dark); padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; }
+        
+        .nav-bar { background: var(--dark); padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .nav-links { display: flex; gap: 15px; }
         .nav-bar a { color: white; text-decoration: none; font-weight: bold; padding: 8px 15px; border-radius: 5px; transition: 0.3s; }
         .nav-bar a:hover, .nav-bar a.active { background: var(--primary); }
+        .btn-logout { background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-logout:hover { background: #dc2626; }
+
         .dashboard { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
         .user-stats { font-size: 1.2rem; font-weight: bold; color: var(--dark); }
         .level-badge { background: #ffedd5; color: #ea580c; padding: 5px 12px; border-radius: 20px; font-size: 1rem; }
+        
         .main-layout { display: grid; grid-template-columns: 320px 1fr; gap: 25px; }
         .chapter-list { background: white; padding: 15px; border-radius: 12px; height: 70vh; overflow-y: auto; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         .chapter-item { padding: 15px; margin-bottom: 12px; background: #f1f5f9; border-radius: 8px; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
         .chapter-item:hover { background: #e2e8f0; transform: translateY(-2px); }
         .chapter-item.completed { border-left: 6px solid var(--primary); background: #f0fdf4; }
+        
         .workspace { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); min-height: 50vh; }
         .grammar-box { background: #eef5ff; padding: 20px; border-left: 5px solid #2a5298; border-radius: 8px; margin-bottom: 25px; line-height: 1.8; }
         .badge { background: #dcfce7; color: #16a34a; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; }
         .option-label { display: block; padding: 12px 15px; margin-bottom: 10px; border: 2px solid #e2e8f0; border-radius: 8px; cursor: pointer; transition: 0.2s; font-size: 1.1rem; }
         .option-label:hover { background: #f8fafc; border-color: #cbd5e1; }
         input[type="radio"] { margin-right: 10px; transform: scale(1.2); cursor: pointer; }
+        
         .btn-check { background: var(--primary); color: white; border: none; padding: 12px 25px; font-size: 1.1rem; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 20px; transition: 0.2s; width: 100%; max-width: 200px; }
         .btn-check:hover { background: #16a34a; }
         .btn-check:disabled { background: #94a3b8; cursor: not-allowed; }
+
+        .mode-toggle-container { background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; border: 1px dashed #cbd5e1; }
+        .btn-mode { padding: 8px 16px; border: 2px solid #cbd5e1; background: white; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .btn-mode.active-basic { border-color: #22c55e; color: #22c55e; background: #f0fdf4; }
+        .btn-mode.active-hard { border-color: #ef4444; color: #ef4444; background: #fef2f2; }
     </style>
 </head>
 <body>
 
     <div class="nav-bar">
-        <a href="index.html" class="active">文法特訓</a>
-        <a href="vocabulary.html">單字字卡</a>
+        <div class="nav-links">
+            <a href="index.html" class="active">文法特訓</a>
+            <a href="vocabulary.html">單字字卡</a>
+            <a href="add_vocabulary.html">➕ 新增單字卡</a>
+        </div>
+        <button class="btn-logout" onclick="logout()">登出</button>
     </div>
 
     <div class="dashboard">
-        <div class="user-stats">多益挑戰者</div>
+        <div class="user-stats">挑戰者: <span id="usernameDisplay" style="color:#2563eb;">載入中...</span></div>
         <div class="user-stats level-badge" id="levelDisplay">等級: 載入中...</div>
         <div class="user-stats" id="progressDisplay">總進度: 載入中...</div>
     </div>
 
     <div class="main-layout">
         <div class="chapter-list" id="chapterList">
-            <p style="padding: 15px; color: #666;">向後端請求資料中，請確保後端已啟動...</p>
+            <p style="padding: 15px; color: #666;">向後端同步雲端存檔中...</p>
         </div>
 
         <div class="workspace" id="workspace">
             <h2>歡迎來到多益文法特訓營！</h2>
-            <p>請從左側選擇一個文法章節開始學習。<br>閱讀重點精要後，完成章節挑戰題即可獲得 EXP！</p>
+            <p>請從左側選擇一個文法章節開始學習。<br>完成章節挑戰題即可獲得 EXP！</p>
         </div>
     </div>
 
     <script>
         const API_URL = "http://localhost:5000";
         let cloudDatabase = [];
-        let currentChapter = null;       // 當前選中的章節物件
-        let currentQuestionIndex = 0;   // 當前進行到第幾題 (0 ~ 19)
+        let currentChapter = null;       
+        let currentQuestionIndex = 0;   
+        let currentMode = 'basic'; 
+        let currentUsername = "";
         
-        let userProfile = {
-            exp: parseInt(localStorage.getItem('user_exp')) || 0,
-            completedChapters: JSON.parse(localStorage.getItem('user_completed')) || []
-        };
+        let userProfile = { exp: 0, completedChapters: [], completedHardMode: [] };
 
         function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
@@ -72,15 +88,34 @@
             return array;
         }
 
+        // 系統初始化：安全過濾登入狀態
         async function initSystem() {
+            currentUsername = localStorage.getItem('toeic_username');
+            if (!currentUsername) {
+                window.location.href = "login.html"; // 強制導回登入頁
+                return;
+            }
+            document.getElementById('usernameDisplay').innerText = currentUsername;
+
             try {
+                // 1. 先向後端請求該帳號在雲端 Firestore 的進度資料
+                const progressRes = await fetch(`${API_URL}/api/get_progress`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: currentUsername })
+                });
+                if (!progressRes.ok) throw new Error("讀取存檔失敗");
+                userProfile = await progressRes.json();
+
+                // 2. 載入題目資料庫
                 const response = await fetch(`${API_URL}/api/lessons`);
                 if (!response.ok) throw new Error("連線異常");
                 cloudDatabase = await response.json();
+                
                 updateDashboard();
                 renderChapters();
             } catch (error) {
-                document.getElementById('chapterList').innerHTML = `<p style='color:red; padding: 15px;'>無法連線至後端，請確認 Python API 是否已啟動。</p>`;
+                document.getElementById('chapterList').innerHTML = `<p style='color:red; padding: 15px;'>雲端存檔讀取失敗，請確認後端是否正常運作。</p>`;
             }
         }
 
@@ -95,9 +130,15 @@
             list.innerHTML = '';
             cloudDatabase.forEach(ch => {
                 const isDone = userProfile.completedChapters.includes(ch.id);
+                const isHardDone = userProfile.completedHardMode.includes(ch.id);
+                
                 const div = document.createElement('div');
                 div.className = `chapter-item ${isDone ? 'completed' : ''}`;
-                div.innerHTML = `<span>${ch.title}</span> ${isDone ? '<span class="badge">已完成</span>' : ''}`;
+                
+                let badges = isDone ? '<span class="badge">已完成</span>' : '';
+                if (isHardDone) badges += ' <span class="badge" style="background:#fef2f2; color:#ef4444;">🔥困難制霸</span>';
+
+                div.innerHTML = `<span>${ch.title}</span> <div>${badges}</div>`;
                 div.onclick = () => loadWorkspace(ch);
                 list.appendChild(div);
             });
@@ -105,7 +146,8 @@
 
         function loadWorkspace(ch) {
             currentChapter = ch;
-            currentQuestionIndex = 0; // 切換章節時，重設回第 1 題
+            currentQuestionIndex = 0; 
+            currentMode = 'basic'; 
 
             const space = document.getElementById('workspace');
             space.innerHTML = `
@@ -113,24 +155,53 @@
                 <div class="grammar-box">
                     <strong>文法核心特訓：</strong><br>${ch.grammar}
                 </div>
+                <div id="modeToggleArea"></div>
                 <div id="quizContainer"></div>
             `;
             
+            if (ch.hard_questions && ch.hard_questions.length > 0) {
+                renderModeToggle();
+            }
             renderCurrentQuestion();
+        }
+
+        function renderModeToggle() {
+            const toggleArea = document.getElementById('modeToggleArea');
+            toggleArea.innerHTML = `
+                <div class="mode-toggle-container">
+                    <strong>測驗難度自選：</strong>
+                    <button id="btnBasic" class="btn-mode ${currentMode === 'basic' ? 'active-basic' : ''}">基礎模式 (${currentChapter.questions.length}題)</button>
+                    <button id="btnHard" class="btn-mode ${currentMode === 'hard' ? 'active-hard' : ''}">🔥 困難挑戰 (${currentChapter.hard_questions.length}題)</button>
+                </div>
+            `;
+
+            document.getElementById('btnBasic').onclick = () => {
+                if (currentMode === 'basic') return;
+                currentMode = 'basic';
+                currentQuestionIndex = 0;
+                renderModeToggle();
+                renderCurrentQuestion();
+            };
+
+            document.getElementById('btnHard').onclick = () => {
+                if (currentMode === 'hard') return;
+                currentMode = 'hard';
+                currentQuestionIndex = 0;
+                renderModeToggle();
+                renderCurrentQuestion();
+            };
         }
 
         function renderCurrentQuestion() {
             const container = document.getElementById('quizContainer');
-            const questions = currentChapter.questions;
+            const questions = currentMode === 'hard' ? currentChapter.hard_questions : currentChapter.questions;
 
             if (!questions || questions.length === 0) {
-                container.innerHTML = `<p style="color:red;">此章節目前沒有設定題目。</p>`;
+                container.innerHTML = `<p style="color:red;">此模式目前沒有設定題目。</p>`;
                 return;
             }
 
             const currentQuiz = questions[currentQuestionIndex];
-            
-            // 處理選項：去除開頭的 "A) " 並打亂順序
             let cleanOptions = currentQuiz.options.map(opt => opt.substring(3));
             cleanOptions = shuffleArray(cleanOptions);
 
@@ -147,12 +218,13 @@
                 `;
             });
 
+            const modeBadge = currentMode === 'hard' ? '<span style="color:#ef4444; font-weight:bold;">[困難模式]</span>' : '[基礎模式]';
             container.innerHTML = `
-                <h3>章節挑戰題 (${currentQuestionIndex + 1} / ${questions.length})</h3>
+                <h3>章節挑戰題 ${modeBadge} (${currentQuestionIndex + 1} / ${questions.length})</h3>
                 <p style="font-size: 1.1rem; margin-bottom: 15px;">${currentQuiz.q}</p>
                 <div id="optionsContainer">${finalOptionsHTML}</div>
                 <div id="actionArea">
-                    <button id="checkBtn" class="btn-check">交卷批改</button>
+                    <button id="checkBtn" class="btn-check" style="${currentMode === 'hard' ? 'background:#ef4444;' : ''}">交卷批改</button>
                 </div>
             `;
 
@@ -168,51 +240,65 @@
             checkBtn.disabled = true;
 
             try {
-                // 將當前題目的 index 傳送給後端，讓後端知道要審查哪一題
                 const response = await fetch(`${API_URL}/api/check_answer`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         id: chId, 
                         questionIndex: currentQuestionIndex, 
-                        text: selected.value 
+                        text: selected.value,
+                        mode: currentMode 
                     })
                 });
                 
                 const result = await response.json();
 
                 if (result.correct) {
-                    alert("🎉 答對了！");
-                    
-                    // 鎖定目前的選項不讓使用者再點
                     document.querySelectorAll('input[name="quiz"]').forEach(input => input.disabled = true);
-                    
                     const actionArea = document.getElementById('actionArea');
-                    const totalQuestions = currentChapter.questions.length;
+                    const questions = currentMode === 'hard' ? currentChapter.hard_questions : currentChapter.questions;
 
-                    if (currentQuestionIndex + 1 < totalQuestions) {
-                        // 如果後面還有題目，顯示「下一題」按鈕
+                    if (currentQuestionIndex + 1 < questions.length) {
                         actionArea.innerHTML = `<button id="nextBtn" class="btn-check" style="background:#2563eb;">下一題</button>`;
                         document.getElementById('nextBtn').onclick = () => {
                             currentQuestionIndex++;
                             renderCurrentQuestion();
                         };
                     } else {
-                        // 20 題全部答完
-                        alert("🏆 恭喜！你已成功完成本章所有 20 道挑戰題！");
-                        actionArea.innerHTML = `<p style="color:var(--primary); font-weight:bold; font-size:1.2rem;">恭喜完成本章節！</p>`;
-                        
-                        if (!userProfile.completedChapters.includes(chId)) {
-                            userProfile.completedChapters.push(chId);
-                            userProfile.exp += 50; // 通關整章獲得 50 EXP
-                            localStorage.setItem('user_exp', userProfile.exp);
-                            localStorage.setItem('user_completed', JSON.stringify(userProfile.completedChapters));
-                            updateDashboard();
-                            renderChapters();
+                        // 通關加分
+                        if (currentMode === 'basic') {
+                            alert("🏆 恭喜！你成功通關基礎題目！進度已同步至雲端。");
+                            if (!userProfile.completedChapters.includes(chId)) {
+                                userProfile.completedChapters.push(chId);
+                                userProfile.exp += 100;
+                            }
+                        } else {
+                            alert("🔥 終極挑戰達成！你成功征服了困難模式！進度已同步至雲端。");
+                            if (!userProfile.completedHardMode.includes(chId)) {
+                                userProfile.completedHardMode.push(chId);
+                                userProfile.exp += 200;
+                            }
                         }
+                        
+                        actionArea.innerHTML = `<p style="color:var(--primary); font-weight:bold; font-size:1.2rem;">本模式挑戰成功！</p>`;
+                        
+                        // 【關鍵：上傳最新狀態至雲端資料庫】
+                        await fetch(`${API_URL}/api/save_progress`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                username: currentUsername,
+                                exp: userProfile.exp,
+                                completedChapters: userProfile.completedChapters,
+                                completedHardMode: userProfile.completedHardMode
+                            })
+                        });
+
+                        updateDashboard();
+                        renderChapters();
                     }
                 } else {
-                    alert("❌ 答錯了，再看一次文法精要挑戰看看！");
+                    alert("❌ 答錯了，再看一次題目挑戰看看！");
                     checkBtn.innerText = "再試一次";
                     checkBtn.disabled = false;
                 }
@@ -221,6 +307,11 @@
                 checkBtn.innerText = "交卷批改";
                 checkBtn.disabled = false;
             }
+        }
+
+        function logout() {
+            localStorage.removeItem('toeic_username'); // 刪除登入憑證
+            window.location.href = "login.html"; // 退回登入頁
         }
 
         window.onload = initSystem;

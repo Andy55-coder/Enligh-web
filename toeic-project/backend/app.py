@@ -4,7 +4,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 
 app = Flask(__name__)
-CORS(app) # 允許前端跨網域呼叫
+CORS(app) 
 
 # 1. 讀取金鑰，連線至 Firestore
 cred = credentials.Certificate("serviceAccountKey.json")
@@ -12,7 +12,102 @@ firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 # ==========================================
-# API 1：取得文法章節 (剔除陣列中每一題的正確答案防止作弊)
+# [新增] 使用者註冊系統
+# ==========================================
+@app.route('/api/register', methods=['POST'])
+def register():
+    try:
+        data = request.json
+        username = data.get('username', '').strip()
+        password = data.get('password', '').strip()
+        
+        if not username or not password:
+            return jsonify({"success": False, "msg": "帳號密碼不可為空"}), 400
+            
+        user_ref = db.collection("users").document(username)
+        if user_ref.get().exists:
+            return jsonify({"success": False, "msg": "此使用者帳號已被註冊"}), 400
+            
+        # 建立使用者核心紀錄與初始零進度結構
+        user_ref.set({
+            "password": password,
+            "exp": 0,
+            "completedChapters": [],
+            "completedHardMode": []
+        })
+        return jsonify({"success": True, "msg": "帳號註冊成功！請進行登入。"}), 201
+    except Exception as e:
+        return jsonify({"success": False, "msg": str(e)}), 500
+
+# ==========================================
+# [新增] 使用者登入系統
+# ==========================================
+@app.route('/api/login', methods=['POST'])
+def login():
+    try:
+        data = request.json
+        username = data.get('username', '').strip()
+        password = data.get('password', '').strip()
+        
+        user_ref = db.collection("users").document(username)
+        user_doc = user_ref.get()
+        
+        if not user_doc.exists:
+            return jsonify({"success": False, "msg": "此帳號不存在"}), 404
+            
+        user_data = user_doc.to_dict()
+        if user_data.get('password') != password:
+            return jsonify({"success": False, "msg": "密碼輸入錯誤"}), 401
+            
+        return jsonify({"success": True, "msg": "登入成功！歡迎回來。"}), 200
+    except Exception as e:
+        return jsonify({"success": False, "msg": str(e)}), 500
+
+# ==========================================
+# [新增] 讀取雲端進度 API
+# ==========================================
+@app.route('/api/get_progress', methods=['POST'])
+def get_progress():
+    data = request.json
+    username = data.get('username', '').strip()
+    
+    user_ref = db.collection("users").document(username)
+    user_doc = user_ref.get()
+    if not user_doc.exists:
+        return jsonify({"error": "找不到該使用者"}), 404
+        
+    user_data = user_doc.to_dict()
+    return jsonify({
+        "exp": user_data.get('exp', 0),
+        "completedChapters": user_data.get('completedChapters', []),
+        "completedHardMode": user_data.get('completedHardMode', [])
+    }), 200
+
+# ==========================================
+# [新增] 儲存進度同步 API
+# ==========================================
+@app.route('/api/save_progress', methods=['POST'])
+def save_progress():
+    try:
+        data = request.json
+        username = data.get('username', '').strip()
+        
+        user_ref = db.collection("users").document(username)
+        if not user_ref.get().exists:
+            return jsonify({"success": False, "msg": "使用者未註冊"}), 404
+            
+        # 將前端最新計算完成的數據複寫回雲端專屬文件
+        user_ref.update({
+            "exp": data.get('exp', 0),
+            "completedChapters": data.get('completedChapters', []),
+            "completedHardMode": data.get('completedHardMode', [])
+        })
+        return jsonify({"success": True, "msg": "雲端進度儲存成功"}), 200
+    except Exception as e:
+        return jsonify({"success": False, "msg": str(e)}), 500
+
+# ==========================================
+# API：取得文法章節
 # ==========================================
 @app.route('/api/lessons', methods=['GET'])
 def get_lessons():
@@ -22,26 +117,27 @@ def get_lessons():
         for doc in docs:
             data = doc.to_dict()
             data['id'] = doc.id
-            
-            # 新版防作弊：遍歷 questions 陣列，把每一題的答案 (ans) 拿掉後再發送給前端
             if 'questions' in data and isinstance(data['questions'], list):
                 for q in data['questions']:
-                    q.pop('ans', None) # 移除個別題目的答案答案欄位
-            
+                    q.pop('ans', None)
+            if 'hard_questions' in data and isinstance(data['hard_questions'], list):
+                for q in data['hard_questions']:
+                    q.pop('ans', None)
             lessons.append(data)
         return jsonify(lessons), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 # ==========================================
-# API 2：對答案系統 (支援指定題號 index 審查)
+# API：對答案系統
 # ==========================================
 @app.route('/api/check_answer', methods=['POST'])
 def check_answer():
     data = request.json
     ch_id = data.get('id')
-    q_idx = data.get('questionIndex', 0)  # 接收前端傳來的題號索引 (0 ~ 19)
+    q_idx = data.get('questionIndex', 0)
     user_selected_text = data.get('text')
+    mode = data.get('mode', 'basic')
 
     doc_ref = db.collection("grammar_lessons").document(ch_id)
     doc = doc_ref.get()
@@ -50,31 +146,25 @@ def check_answer():
         return jsonify({"correct": False, "msg": "找不到該章節"}), 404
 
     db_data = doc.to_dict()
-    questions = db_data.get('questions', [])
+    questions = db_data.get('hard_questions', []) if mode == 'hard' else db_data.get('questions', [])
 
-    # 安全檢查：確保前端傳來的索引值在陣列範圍內
     if q_idx < 0 or q_idx >= len(questions):
         return jsonify({"correct": False, "msg": "題目索引超出範圍"}), 400
 
-    # 取得當前題目
     current_q = questions[q_idx]
-    correct_ans_letter = current_q.get('ans')  # 例如 "C"
+    correct_ans_letter = current_q.get('ans')
     options = current_q.get('options', [])
     
-    # 根據正確字母 (如 "C")，在 options 陣列中尋找對應的完整字串 (如 "C) easier")
     correct_full_str = next((opt for opt in options if opt.startswith(correct_ans_letter)), "")
-    
-    # 去除開頭的 "C) " 提取純文字敘述進行比對
     correct_text = correct_full_str[3:].strip() if len(correct_full_str) > 3 else ""
 
-    # 比對使用者去掉前後空白後的答案
     if user_selected_text and user_selected_text.strip() == correct_text:
         return jsonify({"correct": True, "msg": "答案正確！"}), 200
     else:
         return jsonify({"correct": False, "msg": "答錯囉！"}), 200
 
 # ==========================================
-# API 3：取得單字卡資料
+# API：取得單字卡資料
 # ==========================================
 @app.route('/api/vocabulary', methods=['GET'])
 def get_vocabulary():
@@ -85,17 +175,33 @@ def get_vocabulary():
             data = doc.to_dict()
             data['id'] = doc.id
             words.append(data)
-            
-        # 若資料庫為空，先回傳假資料測試介面
-        if not words:
-            words = [
-                {"word": "implement", "part": "v.", "meaning": "實施、執行", "example": "The company will implement a new policy."},
-                {"word": "abandon", "part": "v.", "meaning": "放棄、拋棄", "example": "They had to abandon the project."}
-            ]
         return jsonify(words), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ==========================================
+# API：儲存自訂單字卡
+# ==========================================
+@app.route('/api/vocabulary', methods=['POST'])
+def add_vocabulary():
+    try:
+        data = request.json
+        word = data.get('word', '').strip()
+        part = data.get('part', '').strip()
+        meaning = data.get('meaning', '').strip()
+        example = data.get('example', '').strip()
+
+        if not word or not meaning:
+            return jsonify({"error": "欄位必填"}), 400
+
+        new_vocab = {
+            "word": word, "part": part if part else "n.", "meaning": meaning, "example": example if example else ""
+        }
+        doc_ref = db.collection("vocabulary").document()
+        doc_ref.set(new_vocab)
+        return jsonify({"success": True}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
-    print("🚀 後端 API 伺服器啟動中...")
     app.run(port=5000, debug=True)
