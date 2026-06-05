@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多益單字卡特訓</title>
+    <style>
+        :root { --primary: #3b82f6; --dark: #0f172a; --bg: #f8fafc; }
+        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
+        .nav-bar { background: var(--dark); padding: 10px 20px; border-radius: 8px; margin-bottom: 30px; display: flex; gap: 15px; }
+        .nav-bar a { color: white; text-decoration: none; font-weight: bold; padding: 8px 15px; border-radius: 5px; transition: 0.3s; }
+        .nav-bar a:hover, .nav-bar a.active { background: var(--primary); }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { color: #1e293b; margin-bottom: 5px; }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; max-width: 1000px; margin: 0 auto; }
+        .flashcard { background: white; padding: 30px 25px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); text-align: center; cursor: pointer; transition: 0.3s; position: relative; overflow: hidden; }
+        .flashcard:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-bottom: 4px solid var(--primary); }
+        .word-title { font-size: 2.2rem; font-weight: bold; color: var(--primary); margin: 0; }
+        .word-part { color: #64748b; font-size: 1rem; margin-top: 5px; }
+        .meaning-section { display: none; margin-top: 20px; padding-top: 20px; border-top: 1px dashed #cbd5e1; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .meaning { font-size: 1.3rem; font-weight: bold; color: #333; margin-bottom: 15px; }
+        .example { font-size: 0.95rem; color: #475569; background: #f1f5f9; padding: 12px; border-radius: 8px; text-align: left; line-height: 1.5; }
+        .flashcard.show-meaning .meaning-section { display: block; }
+        .flashcard.show-meaning .front-hint { display: none; }
+        .front-hint { font-size: 0.85rem; color: #94a3b8; margin-top: 25px; }
+    </style>
+</head>
+<body>
+
+    <div class="nav-bar">
+        <a href="index.html">文法特訓</a>
+        <a href="vocabulary.html" class="active">單字字卡</a>
+    </div>
+
+    <div class="header">
+        <h1>多益核心單字特訓</h1>
+        <p style="color: #64748b;">點擊單字卡即可查看中文解釋與例句，再次點擊可翻回正面</p>
+    </div>
+
+    <div class="grid-container" id="wordList">
+        <p style="text-align:center; grid-column: 1 / -1; padding: 20px;">向後端請求單字資料中，請稍候...</p>
+    </div>
+
+    <script>
+        const API_URL = "http://localhost:5000";
+
+        async function fetchVocabulary() {
+            try {
+                const response = await fetch(`${API_URL}/api/vocabulary`);
+                if (!response.ok) throw new Error("後端連線異常");
+                
+                const words = await response.json();
+                renderFlashcards(words);
+            } catch (error) {
+                document.getElementById('wordList').innerHTML = `<p style="color:red; text-align:center; grid-column: 1 / -1;">連線失敗，請確認 Python 後端是否已啟動！</p>`;
+            }
+        }
+
+        function renderFlashcards(words) {
+            const container = document.getElementById('wordList');
+            container.innerHTML = ''; 
+
+            words.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'flashcard';
+                
+                card.innerHTML = `
+                    <p class="word-title">${item.word}</p>
+                    <p class="word-part">${item.part}</p>
+                    <p class="front-hint">點擊翻面</p>
+                    <div class="meaning-section">
+                        <p class="meaning">${item.meaning}</p>
+                        <div class="example">
+                            <strong style="color:var(--dark);">例句：</strong><br>
+                            ${item.example}
+                        </div>
+                    </div>
+                `;
+
+                card.onclick = () => card.classList.toggle('show-meaning');
+                container.appendChild(card);
+            });
+        }
+
+        window.onload = fetchVocabulary;
+    </script>
+</body>
+</html>
