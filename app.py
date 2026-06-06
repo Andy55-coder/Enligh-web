@@ -32,7 +32,6 @@ if not firebase_admin._apps:
 
 db = firestore.client()
 
-# ...(下面保留你所有的 @app.route 首頁和 API)...
 # ==========================================
 # 3. 網頁畫面路由設定 (控制哪個網址顯示哪個 HTML)
 # ==========================================
@@ -54,7 +53,7 @@ def add_vocabulary_page():
     return render_template('add_vocabulary.html')
 
 # ==========================================
-# 以下是你原本寫好的 API 系統，原封不動保留
+# 4. API 系統區域
 # ==========================================
 
 # --- 使用者註冊系統 ---
@@ -253,12 +252,6 @@ def add_vocabulary():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# 讓 Vercel 可以抓到這個 app 物件
-app = Flask(__name__, template_folder=template_dir)
-CORS(app)
-
-# ... (中間 API 保持不變) ...
-
-# 移除或修改 __main__ 判斷，確保本地測試可用，但上線由 Vercel 接管
+# 本地端測試與上線分流
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
