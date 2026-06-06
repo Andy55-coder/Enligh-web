@@ -6,13 +6,14 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 
 # ==========================================
-# 1. 告訴 Flask 去外層的 frontend 資料夾找 HTML
+# 1. 告訴 Flask 去外層找 HTML 與 CSS
 # ==========================================
 base_dir = os.path.dirname(os.path.abspath(__file__))
 template_dir = os.path.join(base_dir, '..', 'frontend')
+static_dir = os.path.join(base_dir, '..', 'static')
 
-app = Flask(__name__, template_folder=template_dir)
-CORS(app)
+app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
+CORS(app) 
 
 # ==========================================
 # 2. 讀取金鑰，連線至 Firestore (支援 Vercel 與本地端)
@@ -20,27 +21,44 @@ CORS(app)
 firebase_credentials = os.environ.get('FIREBASE_SERVICE_ACCOUNT')
 
 if firebase_credentials:
-    # 這是 Vercel 環境：從環境變數讀取
+    # 這是 Vercel 環境
     cred_dict = json.loads(firebase_credentials)
     cred = credentials.Certificate(cred_dict)
 else:
-    # 這是本地端環境：明確指定去 backend 資料夾下找檔案
+    # 這是本地端環境
     key_path = os.path.join(base_dir, "serviceAccountKey.json")
     cred = credentials.Certificate(key_path)
 
-# 初始化 Firebase
 if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
 
 # ==========================================
-# 使用者註冊系統
+# 3. 網頁畫面路由設定 (控制哪個網址顯示哪個 HTML)
 # ==========================================
+@app.route('/')
+def home():
+    # 網站一進來就是登入畫面
+    return render_template('login.html')
+
+@app.route('/index')
+def index_page():
+    return render_template('index.html')
+
 @app.route('/vocabulary')
-def vocabulary():
+def vocabulary_page():
     return render_template('vocabulary.html')
 
+@app.route('/add_vocabulary')
+def add_vocabulary_page():
+    return render_template('add_vocabulary.html')
+
+# ==========================================
+# 以下是你原本寫好的 API 系統，原封不動保留
+# ==========================================
+
+# --- 使用者註冊系統 ---
 @app.route('/api/register', methods=['POST'])
 def register():
     try:
@@ -66,9 +84,7 @@ def register():
     except Exception as e:
         return jsonify({"success": False, "msg": str(e)}), 500
 
-# ==========================================
-# 使用者登入系統
-# ==========================================
+# --- 使用者登入系統 ---
 @app.route('/api/login', methods=['POST'])
 def login():
     try:
@@ -90,9 +106,7 @@ def login():
     except Exception as e:
         return jsonify({"success": False, "msg": str(e)}), 500
 
-# ==========================================
-# 讀取與儲存雲端進度 API
-# ==========================================
+# --- 讀取與儲存雲端進度 API ---
 @app.route('/api/get_progress', methods=['POST'])
 def get_progress():
     data = request.json
@@ -131,9 +145,7 @@ def save_progress():
     except Exception as e:
         return jsonify({"success": False, "msg": str(e)}), 500
 
-# ==========================================
-# API：取得文法章節與對答案系統
-# ==========================================
+# --- API：取得文法章節與對答案系統 ---
 @app.route('/api/lessons', methods=['GET'])
 def get_lessons():
     try:
@@ -185,9 +197,7 @@ def check_answer():
     else:
         return jsonify({"correct": False, "msg": "答錯囉！"}), 200
 
-# ==========================================
-# API：取得單字卡資料 (全域百大 + 個人專屬)
-# ==========================================
+# --- API：取得單字卡資料 (全域百大 + 個人專屬) ---
 @app.route('/api/vocabulary', methods=['GET'])
 def get_vocabulary():
     try:
@@ -215,9 +225,7 @@ def get_vocabulary():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ==========================================
-# API：儲存自訂單字卡 (存入個人的子集合)
-# ==========================================
+# --- API：儲存自訂單字卡 (存入個人的子集合) ---
 @app.route('/api/vocabulary', methods=['POST'])
 def add_vocabulary():
     try:
