@@ -3,48 +3,218 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的單字字卡</title>
+    <title>單字字卡</title>
     <style>
-        :root { --primary: #22c55e; --dark: #0f172a; --bg: #f8fafc; }
-        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
-        
-        .nav-bar { background: var(--dark); padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; }
-        .nav-bar a { color: white; text-decoration: none; font-weight: bold; padding: 8px 15px; border-radius: 5px; transition: 0.3s; }
-        .nav-bar a:hover, .nav-bar a.active { background: var(--primary); }
-        .dashboard { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 25px; }
-        .user-stats { font-size: 1.2rem; font-weight: bold; color: var(--dark); }
+        :root { 
+            --primary: #3b82f6; 
+            --primary-hover: #2563eb;
+            --dark: #0f172a; 
+            --nav-bg: rgba(15, 23, 42, 0.9); 
+            --success: #10b981; 
+            --success-hover: #059669;
+            --text-main: #1e293b;
+            --text-muted: #475569;
+        }
 
-        .main-container { display: flex; justify-content: center; max-width: 1200px; margin: 0 auto; }
-        .flashcard-section { display: flex; flex-direction: column; align-items: center; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); width: 100%; max-width: 700px; }
+        * {
+            box-sizing: border-box;
+        }
+
+        body { 
+            font-family: "Helvetica Neue", Arial, "Noto Sans TC", "Microsoft JhengHei", sans-serif; 
+            /* 🎯 滿版高質感深色漸層背景，全站風格一致 */
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #111827 100%);
+            background-attachment: fixed;
+            background-size: cover;
+            margin: 0; 
+            padding: 0; 
+            color: #f8fafc; 
+            min-height: 100vh;
+        }
         
-        .card-container { perspective: 1000px; width: 100%; height: 400px; cursor: pointer; margin-bottom: 20px; }
-        .flashcard { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 10px 25px rgba(0,0,0,0.08); border-radius: 16px; }
+        /* 統一高質感黑色微透導覽列 */
+        .nav-bar { 
+            background: var(--nav-bg); 
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 14px 28px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-left { display: flex; align-items: center; gap: 16px; }
+        .nav-logo { color: #fff; font-weight: 800; font-size: 1.25rem; text-decoration: none; margin-right: 20px; letter-spacing: 0.5px; }
+        .nav-links { display: flex; gap: 12px; }
+        .nav-bar a.nav-btn { color: #9ca3af; text-decoration: none; font-weight: 600; font-size: 0.95rem; padding: 8px 16px; border-radius: 8px; transition: all 0.2s ease; }
+        .nav-bar a.nav-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
+        .nav-bar a.nav-btn.active { color: #fff; background: var(--primary); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+        .nav-bar a.btn-add-vocab { background: var(--success); color: #fff; }
+        .nav-bar a.btn-add-vocab:hover { background: var(--success-hover); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+        
+        .nav-right { display: flex; align-items: center; gap: 15px; color: #fff; }
+        .btn-logout { background: #ef4444; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s ease; font-size: 0.9rem; }
+        .btn-logout:hover { background: #dc2626; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+        .user-avatar { width: 36px; height: 36px; background: #8b5cf6; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.95rem; cursor: pointer; box-shadow: 0 0 10px rgba(139, 92, 246, 0.4); }
+
+        /* 🎯 進度看板：優化為暗色微透面板 */
+        .dashboard { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: rgba(30, 41, 59, 0.7); 
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            padding: 16px 32px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+            margin-bottom: 35px; 
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05); 
+        }
+        .user-stats { font-size: 1.15rem; font-weight: 700; color: #f1f5f9; letter-spacing: 0.5px; }
+
+        /* 主要佈局容器 */
+        .main-container { display: flex; justify-content: center; max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        
+        /* 🎯 字卡外層容器（微霧半透明玻璃底座） */
+        .flashcard-section { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            background: rgba(255, 255, 255, 0.06); 
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 40px; 
+            border-radius: 20px; 
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); 
+            width: 100%; 
+            max-width: 720px; 
+            border: 1px solid rgba(255, 255, 255, 0.12); 
+        }
+        
+        /* 3D 翻轉卡片主體 */
+        .card-container { perspective: 1200px; width: 100%; height: 420px; cursor: pointer; margin-bottom: 25px; }
+        .flashcard { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
         .flashcard.flipped { transform: rotateY(180deg); }
         
-        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 16px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px; box-sizing: border-box; background: white; border: 2px solid #e2e8f0; text-align: center; }
+        /* 💡 卡片正面與反面共同核心樣式（確保陰影立體、圓角完美） */
+        .card-face { 
+            position: absolute; 
+            width: 100%; 
+            height: 100%; 
+            backface-visibility: hidden; 
+            -webkit-backface-visibility: hidden;
+            border-radius: 16px; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 40px; 
+            box-sizing: border-box; 
+            text-align: center; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+        }
         
-        .card-front { color: var(--dark); }
-        .card-front .word-text { font-size: 4rem; font-weight: bold; letter-spacing: 1px; margin-bottom: 15px; }
-        .card-front .pron-btn { background: #f1f5f9; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; color: #475569; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px; font-size: 1rem; }
-        .card-front .pron-btn:hover { background: #e2e8f0; color: var(--dark); }
+        /* 💡 正面樣式：純白高亮底，英文單字極度鮮明清晰 */
+        .card-front { 
+            background: #ffffff; 
+            border: 2px solid #e2e8f0; 
+            color: #0f172a; 
+        }
+        .card-front .word-text { 
+            font-size: 4.2rem; 
+            font-weight: 800; 
+            letter-spacing: 0.5px; 
+            margin-bottom: 20px; 
+            color: #0f172a;
+        }
+        /* 發音按鈕微調 */
+        .card-front .pron-btn { 
+            background: #f1f5f9; 
+            border: 1px solid #cbd5e1;
+            padding: 12px 24px; 
+            border-radius: 24px; 
+            font-weight: 700; 
+            color: #475569; 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            font-size: 1rem; 
+        }
+        .card-front .pron-btn:hover { background: #e2e8f0; color: #0f172a; transform: scale(1.03); }
         
-        .card-back { transform: rotateY(180deg); background: #f0fdf4; border-color: #bbf7d0; }
-        .card-back .meaning-text { font-size: 2.8rem; font-weight: bold; color: #16a34a; margin-bottom: 20px; }
-        .card-back .example-text { font-size: 1.2rem; color: #475569; font-style: italic; background: white; padding: 15px 20px; border-radius: 8px; border-left: 4px solid var(--primary); max-width: 90%; }
+        /* 💡 反面樣式：升級為高質感薄荷嫩綠底，搭配極高對比的深綠字體 */
+        .card-back { 
+            transform: rotateY(180deg); 
+            background: #e6f4ea; 
+            border: 2px solid #10b981; 
+        }
+        .card-back .meaning-text { 
+            font-size: 3rem; 
+            font-weight: 800; 
+            color: #065f46; 
+            margin-bottom: 25px; 
+        }
+        /* 例句方框：純白襯底配深灰色細緻字體，閱讀感極度舒適 */
+        .card-back .example-text { 
+            font-size: 1.25rem; 
+            color: #1e293b; 
+            font-weight: 500;
+            background: #ffffff; 
+            padding: 18px 24px; 
+            border-radius: 10px; 
+            border-left: 5px solid #10b981; 
+            max-width: 95%; 
+            text-align: left; 
+            line-height: 1.6; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
 
-        .card-controls { display: flex; align-items: center; gap: 30px; margin-top: 15px; }
-        .btn-ctrl { background: var(--dark); color: white; border: none; padding: 12px 25px; font-size: 1.1rem; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.2s; }
-        .btn-ctrl:hover { background: #1e293b; }
-        .btn-ctrl:disabled { background: #cbd5e1; cursor: not-allowed; }
-        .progress-text { font-weight: bold; color: #64748b; font-size: 1.2rem; }
+        /* 🎯 底部控制鈕與進度文字組合 */
+        .card-controls { display: flex; align-items: center; gap: 35px; margin-top: 20px; }
+        
+        /* 控制按鈕（上一題/下一題） */
+        .btn-ctrl { 
+            background: #1e293b; 
+            color: white; 
+            border: none; 
+            padding: 14px 32px; 
+            font-size: 1.05rem; 
+            font-weight: 700; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .btn-ctrl:hover:not(:disabled) { background: #0f172a; transform: translateY(-1px); box-shadow: 0 6px 14px rgba(0,0,0,0.3); }
+        .btn-ctrl:active { transform: translateY(0); }
+        .btn-ctrl:disabled { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.05); cursor: not-allowed; box-shadow: none; transform: none; }
+        
+        /* 當前進度字體調亮，在深色背景下極顯眼 */
+        .progress-text { font-weight: 700; color: #cbd5e1; font-size: 1.25rem; letter-spacing: 0.5px; }
     </style>
 </head>
 <body>
 
     <div class="nav-bar">
-        <a href="/index">文法特訓</a>
-        <a href="/vocabulary" class="active">單字字卡</a>
-        <a href="/add_vocabulary">➕ 新增單字卡</a>
+        <div class="nav-left">
+            <a href="/index" class="nav-logo"></a>
+            <div class="nav-links">
+                <a href="/index" class="nav-btn">文法特訓</a>
+                <a href="/vocabulary" class="nav-btn active">單字字卡</a>
+                <a href="/add_vocabulary" class="nav-btn btn-add-vocab">＋ 新增單字卡</a>
+                <a href="/quiz" class="nav-btn">單字測驗</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <button class="btn-logout" onclick="logout()">登出</button>
+            <div class="user-avatar" id="navAvatar" title="我的帳號" onclick="logout()">U</div>
+        </div>
     </div>
 
     <div class="dashboard">
@@ -85,6 +255,7 @@
         const API_URL = "";
         let vocabularyList = [];
         let currentIndex = 0;
+        let currentUsername = "";
 
         async function loadFolderList(username) {
             try {
@@ -119,21 +290,23 @@
         }
 
         async function loadVocabulary() {
-            const username = localStorage.getItem('toeic_username');
-            if (!username) {
+            currentUsername = localStorage.getItem('toeic_username');
+            if (!currentUsername) {
                 window.location.href = "/"; 
                 return;
             }
+            // 動態產生導覽列頭貼縮寫
+            document.getElementById('navAvatar').innerText = currentUsername.charAt(0).toUpperCase();
 
             const filter = document.getElementById('folderFilter');
             if (filter.options.length <= 1 && filter.options[0]?.value === "總單字卡") {
-                await loadFolderList(username);
+                await loadFolderList(currentUsername);
             }
 
             const selectedFolder = filter.value;
 
             try {
-                const response = await fetch(`${API_URL}/api/vocabulary?username=${username}&folder_name=${encodeURIComponent(selectedFolder)}`);
+                const response = await fetch(`${API_URL}/api/vocabulary?username=${currentUsername}&folder_name=${encodeURIComponent(selectedFolder)}`);
                 if (!response.ok) throw new Error("無法取得單字庫");
                 vocabularyList = await response.json();
                 
@@ -187,7 +360,7 @@
         }
 
         function pronounceWord(event) {
-            event.stopPropagation();
+            event.stopPropagation(); // 防止觸發字卡翻轉
             if (vocabularyList.length === 0) return;
             const current = vocabularyList[currentIndex];
             const word = current.word || current['單字 (Word)'];
@@ -205,6 +378,11 @@
             if (currentIndex < 0) currentIndex = 0;
             if (currentIndex >= vocabularyList.length) currentIndex = vocabularyList.length - 1;
             renderCard();
+        }
+
+        function logout() {
+            localStorage.removeItem('toeic_username'); 
+            window.location.href = "/"; 
         }
 
         window.onload = loadVocabulary;

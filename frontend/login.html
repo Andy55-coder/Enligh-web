@@ -4,19 +4,138 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>多益學習系統 - 登入</title>
-    <style>
-        :root { --primary: #22c55e; --dark: #0f172a; --bg: #f8fafc; }
-        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .login-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 400px; box-sizing: border-box; }
-        .login-card h2 { margin-top: 0; color: var(--dark); text-align: center; margin-bottom: 25px; }
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #475569; }
-        .form-control { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; box-sizing: border-box; outline: none; transition: 0.2s; }
-        .form-control:focus { border-color: var(--primary); }
-        .btn-submit { background: var(--primary); color: white; border: none; width: 100%; padding: 14px; font-size: 1.1rem; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.2s; margin-top: 10px; }
-        .btn-submit:hover { background: #16a34a; }
-        .toggle-mode { text-align: center; margin-top: 20px; color: #64748b; font-size: 0.95rem; }
-        .toggle-mode span { color: #3b82f6; cursor: pointer; font-weight: bold; text-decoration: underline; }
+<style>
+        :root { 
+            --primary: #10b981; 
+            --primary-hover: #059669;
+            --dark: #0f172a; 
+            --link-color: #3b82f6;
+            --link-hover: #2563eb;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body { 
+            font-family: "Helvetica Neue", Arial, "Noto Sans TC", "Microsoft JhengHei", sans-serif; 
+            /* 🎯 滿版高質感深色漸層背景，與其他頁面完全同步 */
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #111827 100%);
+            background-attachment: fixed;
+            background-size: cover;
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+            color: #f8fafc;
+        }
+        
+        /* 🎯 登入卡片：改為極具質感的微霧半透明玻璃面板 */
+        .login-card { 
+            background: rgba(255, 255, 255, 0.96); 
+            padding: 45px 40px; 
+            border-radius: 16px; 
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5); 
+            width: 100%; 
+            max-width: 420px; 
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        /* 💡 標題顏色改為極深色，確保黑白對比度最高 */
+        .login-card h2 { 
+            margin-top: 0; 
+            color: #0f172a; 
+            text-align: center; 
+            margin-bottom: 30px; 
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+        
+        .form-group { margin-bottom: 24px; }
+        
+        /* 💡 帳號密碼標籤字體加粗，顯眼且易讀 */
+        .form-group label { 
+            display: block; 
+            font-weight: 700; 
+            margin-bottom: 10px; 
+            color: #334155; 
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+        }
+        
+        /* 💡 輸入框全面優化：純白背景配深色文字（#1e293b），聚焦時散發流暢綠光 */
+        .form-control { 
+            width: 100%; 
+            padding: 14px 16px; 
+            border: 2px solid #cbd5e1; 
+            border-radius: 10px; 
+            font-size: 1rem; 
+            font-weight: 500;
+            color: var(--text-main);
+            background: #ffffff;
+            outline: none; 
+            transition: all 0.25s ease; 
+        }
+        .form-control::placeholder {
+            color: #94a3b8;
+        }
+        .form-control:focus { 
+            border-color: var(--primary); 
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15);
+            background: #ffffff;
+        }
+        
+        /* 💡 登入/註冊送出按鈕升級（帶微發光立體感） */
+        .btn-submit { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            width: 100%; 
+            padding: 15px; 
+            font-size: 1.15rem; 
+            font-weight: 700; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            margin-top: 15px; 
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.25);
+            letter-spacing: 1px;
+        }
+        .btn-submit:hover { 
+            background: var(--primary-hover); 
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.35);
+        }
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+        
+        /* 💡 下方切換模式區塊（沒有帳號？立即註冊） */
+        .toggle-mode { 
+            text-align: center; 
+            margin-top: 25px; 
+            color: #475569; 
+            font-size: 0.95rem; 
+            font-weight: 500;
+        }
+        /* 讓可點擊的藍色連結文字更粗、更醒目 */
+        .toggle-mode span { 
+            color: var(--link-color); 
+            cursor: pointer; 
+            font-weight: 700; 
+            text-decoration: none;
+            margin-left: 4px;
+            transition: color 0.2s ease;
+        }
+        .toggle-mode span:hover { 
+            color: var(--link-hover);
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>

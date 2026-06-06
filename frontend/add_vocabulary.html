@@ -5,40 +5,180 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>建立新字卡</title>
     <style>
-        :root { --primary: #22c55e; --dark: #0f172a; --bg: #f8fafc; }
-        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
+        :root { 
+            --primary: #3b82f6; 
+            --primary-hover: #2563eb;
+            --dark: #0f172a; 
+            --nav-bg: rgba(15, 23, 42, 0.9); 
+            --success: #10b981; 
+            --success-hover: #059669;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body { 
+            font-family: "Helvetica Neue", Arial, "Noto Sans TC", "Microsoft JhengHei", sans-serif; 
+            /* 🎯 滿版高質感漸層背景 */
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+            background-attachment: fixed;
+            background-size: cover;
+            margin: 0; 
+            padding: 0; 
+            color: #f8fafc; 
+            min-height: 100vh;
+        }
         
-        .nav-bar { background: var(--dark); padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; }
-        .nav-bar a { color: white; text-decoration: none; font-weight: bold; padding: 8px 15px; border-radius: 5px; transition: 0.3s; }
-        .nav-bar a:hover, .nav-bar a.active { background: var(--primary); }
+        /* 統一高質感黑色微透導覽列 */
+        .nav-bar { 
+            background: var(--nav-bg); 
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 14px 28px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-left { display: flex; align-items: center; gap: 16px; }
+        .nav-logo { color: #fff; font-weight: 800; font-size: 1.25rem; text-decoration: none; margin-right: 20px; letter-spacing: 0.5px; }
+        .nav-links { display: flex; gap: 12px; }
+        .nav-bar a.nav-btn { color: #9ca3af; text-decoration: none; font-weight: 600; font-size: 0.95rem; padding: 8px 16px; border-radius: 8px; transition: all 0.2s ease; }
+        .nav-bar a.nav-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
+        .nav-bar a.nav-btn.active { color: #fff; background: var(--primary); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+        .nav-bar a.btn-add-vocab { background: var(--success); color: #fff; }
+        .nav-bar a.btn-add-vocab:hover { background: var(--success-hover); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
         
-        .main-container { display: flex; justify-content: center; max-width: 1200px; margin: 0 auto; padding-top: 20px; }
-        .form-section { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); width: 100%; max-width: 600px; }
+        .nav-right { display: flex; align-items: center; gap: 15px; color: #fff; }
+        .btn-logout { background: #ef4444; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s ease; font-size: 0.9rem; }
+        .btn-logout:hover { background: #dc2626; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+        .user-avatar { width: 36px; height: 36px; background: #8b5cf6; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.95rem; cursor: pointer; box-shadow: 0 0 10px rgba(139, 92, 246, 0.4); }
+
+        /* 表單主容器 */
+        .main-container { display: flex; justify-content: center; max-width: 1200px; margin: 0 auto; padding: 60px 20px; }
         
-        h2 { margin-top: 0; color: var(--dark); display: flex; align-items: center; gap: 10px; font-size: 1.8rem; }
-        .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: bold; color: #475569; }
+        /* 🎯 卡片改為微霧半透明玻璃質感，深色文字在純白基底上絕對清晰 */
+        .form-section { 
+            background: rgba(255, 255, 255, 0.96); 
+            padding: 45px; 
+            border-radius: 16px; 
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); 
+            width: 100%; 
+            max-width: 620px; 
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            transition: transform 0.3s ease;
+        }
         
-        .radio-group { display: flex; gap: 20px; margin-bottom: 10px; }
-        .radio-label { display: flex; align-items: center; gap: 5px; cursor: pointer; font-weight: normal; }
+        /* 💡 標題顏色改為更有層次感的深藍 */
+        h2 { 
+            margin-top: 0; 
+            color: #0f172a; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            font-size: 1.9rem; 
+            font-weight: 700;
+            border-bottom: 2px solid #e2e8f0; 
+            padding-bottom: 18px; 
+        }
         
-        input[type="text"], select, textarea { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; box-sizing: border-box; outline: none; transition: 0.2s; }
-        input[type="text"]:focus, select:focus, textarea:focus { border-color: var(--primary); }
+        .form-group { margin-bottom: 24px; }
         
-        .word-input-container { display: flex; gap: 10px; }
-        .btn-translate { background: #3b82f6; color: white; border: none; padding: 0 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; white-space: nowrap; }
-        .btn-translate:hover { background: #2563eb; }
+        /* 💡 標籤字體加粗加大，大幅提升可讀性 */
+        label { display: block; margin-bottom: 10px; font-weight: 700; color: #334155; font-size: 1rem; letter-spacing: 0.5px; }
         
-        .btn-submit { background: var(--primary); color: white; border: none; width: 100%; padding: 15px; font-size: 1.2rem; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.2s; margin-top: 10px; }
-        .btn-submit:hover { background: #16a34a; }
+        .radio-group { display: flex; gap: 24px; margin-bottom: 14px; background: #f1f5f9; padding: 10px 16px; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .radio-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; color: #475569; font-size: 0.95rem; }
+        .radio-label input[type="radio"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
+        
+        /* 💡 輸入框全面優化：純白背景配極深色字體（#1e293b），加上精緻對焦發光藍框 */
+        input[type="text"], select, textarea { 
+            width: 100%; 
+            padding: 14px 16px; 
+            border: 2px solid #cbd5e1; 
+            border-radius: 10px; 
+            font-size: 1rem; 
+            font-weight: 500;
+            color: var(--text-main); 
+            background: #ffffff; 
+            outline: none; 
+            transition: all 0.25s ease; 
+        }
+        input[type="text"]::placeholder, textarea::placeholder {
+            color: #94a3b8;
+        }
+        input[type="text"]:focus, select:focus, textarea:focus { 
+            border-color: var(--primary); 
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); 
+            background: #ffffff;
+        }
+        
+        select { cursor: pointer; }
+        textarea { resize: vertical; min-height: 100px; }
+        
+        .word-input-container { display: flex; gap: 12px; }
+        
+        /* 💡 翻譯按鈕升級 */
+        .btn-translate { 
+            background: var(--primary); 
+            color: white; 
+            border: none; 
+            padding: 0 24px; 
+            border-radius: 10px; 
+            font-weight: 700; 
+            font-size: 0.95rem;
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            white-space: nowrap; 
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+        .btn-translate:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3); }
+        .btn-translate:active { transform: translateY(0); }
+        .btn-translate:disabled { background: #94a3b8; cursor: not-allowed; box-shadow: none; transform: none; }
+        
+        /* 💡 送出字卡按鈕升級（帶微發光立體感） */
+        .btn-submit { 
+            background: var(--success); 
+            color: white; 
+            border: none; 
+            width: 100%; 
+            padding: 16px; 
+            font-size: 1.2rem; 
+            font-weight: 700; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            margin-top: 15px; 
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3); 
+            letter-spacing: 1px;
+        }
+        .btn-submit:hover { background: var(--success-hover); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4); }
+        .btn-submit:active { transform: translateY(0); }
     </style>
 </head>
 <body>
 
     <div class="nav-bar">
-        <a href="/index">文法特訓</a>
-        <a href="/vocabulary">單字字卡</a>
-        <a href="/add_vocabulary" class="active">➕ 新增單字卡</a>
+        <div class="nav-left">
+            <a href="/index" class="nav-logo"></a>
+            <div class="nav-links">
+                <a href="/index" class="nav-btn">文法特訓</a>
+                <a href="/vocabulary" class="nav-btn">單字字卡</a>
+                <a href="/add_vocabulary" class="nav-btn active btn-add-vocab">＋ 新增單字卡</a>
+                <a href="/quiz" class="nav-btn">單字測驗</a>
+            </div>
+        </div>
+        <div class="nav-right">
+            <button class="btn-logout" onclick="logout()">登出</button>
+            <div class="user-avatar" id="navAvatar" title="我的帳號" onclick="logout()">U</div>
+        </div>
     </div>
 
     <div class="main-container">
@@ -107,10 +247,15 @@
             document.getElementById('newFolderInput').style.display = isSelect ? 'none' : 'block';
         }
 
-        // 動態獲取該使用者的資料夾清單，並強制把「總單字卡」塞在最上面
+        // 動態獲取該使用者的資料夾清單
         async function loadExistingFolders() {
             const username = localStorage.getItem('toeic_username');
-            if (!username) return;
+            if (!username) {
+                window.location.href = "/";
+                return;
+            }
+            // 動態產生導覽列頭貼縮寫
+            document.getElementById('navAvatar').innerText = username.charAt(0).toUpperCase();
 
             try {
                 const response = await fetch(`${API_URL}/api/get_folders?username=${username}`);
@@ -121,7 +266,7 @@
                     
                     folderSelect.innerHTML = '';
 
-                    // 🌟 核心要求：在選擇現有資料夾中加入「總單字卡」
+                    // 強制在選擇現有資料夾中加入「總單字卡」
                     const totalOpt = document.createElement('option');
                     totalOpt.value = "總單字卡";
                     totalOpt.innerText = "📁 總單字卡";
@@ -142,79 +287,161 @@
             }
         }
 
-        // 簡單的前端模擬自動翻譯功能
+        // 前端模擬自動翻譯功能（修復抓不到 ID 的問題）
         function autoTranslate() {
-            const word = document.getElementById('wordInput').value.trim().toLowerCase();
+            const wordInput = document.getElementById('wordInput');
+            if (!wordInput) {
+                alert("前端錯誤：找不到單字輸入框(wordInput)！");
+                return;
+            }
+            
+            const word = wordInput.value.trim().toLowerCase();
             if (!word) {
                 alert("請先輸入英文單字！");
                 return;
             }
+            
+            // 測試範例 1: implement
             if (word === "implement") {
                 document.getElementById('partSelect').value = "動詞 (v.)";
                 document.getElementById('meaningInput').value = "實施、執行";
                 document.getElementById('exampleInput').value = "The company will implement a new policy.";
+            } 
+            // 測試範例 2: viability (圖片中使用的單字)
+            else if (word === "viability") {
+                document.getElementById('partSelect').value = "名詞 (n.)";
+                document.getElementById('meaningInput').value = "可行性、生存能力";
+                document.getElementById('exampleInput').value = "We need to conduct a study on the financial viability of the project.";
             } else {
-                alert("翻譯完畢！(其餘單字請手動輸入中文與例句)");
+                alert("模擬翻譯完畢！(其餘單字請手動輸入中文與例句)");
             }
         }
 
         // 送出表單資料給後端 API
-        async function submitNewCard() {
-            const username = localStorage.getItem('toeic_username');
-            if (!username) {
-                alert("請先登入！");
-                window.location.href = "/";
-                return;
-            }
+// 1. 修正後的新增字卡函數
+async function submitNewCard() {
+    const username = localStorage.getItem('toeic_username');
+    if (!username) {
+        alert("請先登入！");
+        window.location.href = "/";
+        return;
+    }
 
-            const word = document.getElementById('wordInput').value.trim();
-            const part = document.getElementById('partSelect').value;
-            const meaning = document.getElementById('meaningInput').value.trim();
-            const example = document.getElementById('exampleInput').value.trim();
+    const word = document.getElementById('wordInput').value.trim();
+    const part = document.getElementById('partSelect').value;
+    const meaning = document.getElementById('meaningInput').value.trim();
+    const example = document.getElementById('exampleInput').value.trim();
+    
+    // 判斷要抓取 Select 選單還是 Input 的字串
+    const isSelectMode = document.getElementById('modeSelect').checked;
+    let folder_name = "總單字卡";
+
+    if (isSelectMode) {
+        folder_name = document.getElementById('folderSelect').value;
+    } else {
+        folder_name = document.getElementById('newFolderInput').value.trim();
+    }
+
+    if (!folder_name) {
+        alert("請輸入新資料夾名稱！");
+        return;
+    }
+
+    if (!word || !meaning) {
+        alert("請填寫英文單字與中文翻譯！");
+        return;
+    }
+
+    const payload = { username, word, part, meaning, example, folder_name };
+
+    try {
+        // 💡 關鍵修正：將網址由 /api/add_vocabulary 改為 /api/vocabulary，完美對接後端 POST 路由
+        const response = await fetch(`${API_URL}/api/vocabulary`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            alert(`成功加入字卡到資料夾 [${folder_name}]！`);
+            // 清空輸入框
+            document.getElementById('wordInput').value = '';
+            document.getElementById('meaningInput').value = '';
+            document.getElementById('exampleInput').value = '';
+            document.getElementById('newFolderInput').value = '';
+            await loadExistingFolders();
+        } else {
+            // 後端回傳的是 JSON，這裡改用 .json() 解析能抓到更精確的錯誤訊息
+            const errorData = await response.json();
+            alert(`新增失敗！後端狀態碼: ${response.status}\n錯誤訊息: ${errorData.error || errorData.msg}`);
+        }
+    } catch (error) {
+        alert("連線失敗，請確認網路或 Python 後端服務是否正常啟動。");
+    }
+}
+
+// 2. 全新擴充：真正支援任意英文單字的「自動翻譯」函數
+// 🎯 修正後的前端自動翻譯函數：改為呼叫自己的 Python 後端 API
+async function autoTranslate() {
+    const wordInput = document.getElementById('wordInput');
+    if (!wordInput) return;
+
+    const word = wordInput.value.trim();
+    if (!word) {
+        alert("請先輸入英文單字！");
+        return;
+    }
+
+    const translateBtn = document.querySelector('.btn-translate');
+    const originalText = translateBtn.innerText;
+    translateBtn.innerText = "翻譯中...";
+    translateBtn.disabled = true;
+
+    try {
+        const response = await fetch(`${API_URL}/api/translate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ word: word })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
             
-            // 判斷要抓取 Select 選單還是 Input 的字串
-            const isSelectMode = document.getElementById('modeSelect').checked;
-            let folder_name = "總單字卡";
-
-            if (isSelectMode) {
-                folder_name = document.getElementById('folderSelect').value;
-            } else {
-                folder_name = document.getElementById('newFolderInput').value.trim();
+            // 1. 填入更高級精準的中文翻譯
+            if (data.meaning) {
+                document.getElementById('meaningInput').value = data.meaning;
             }
 
-            if (!folder_name) {
-                alert("請輸入新資料夾名稱！");
-                return;
+            // 2. 自動選擇詞性
+            if (data.part) {
+                const partSelect = document.getElementById('partSelect');
+                if (data.part === "n." || data.part === "名詞 (n.)") partSelect.value = "名詞 (n.)";
+                else if (data.part === "v." || data.part === "動詞 (v.)") partSelect.value = "動詞 (v.)";
+                else if (data.part === "adj." || data.part === "形容詞 (adj.)") partSelect.value = "形容詞 (adj.)";
+                else if (data.part === "adv." || data.part === "副詞 (adv.)") partSelect.value = "副詞 (adv.)";
+                else if (data.part === "prep." || data.part === "介系詞 (prep.)") partSelect.value = "介系詞 (prep.)";
+                else if (data.part === "conj." || data.part === "連字詞 (conj.)") partSelect.value = "連字詞 (conj.)";
             }
 
-            if (!word || !meaning) {
-                alert("請填寫英文單字與中文翻譯！");
-                return;
+            // 3. 🌟 必定會自動產生專屬例句（100% 不會再出現空白或是死板的重複句子）
+            if (data.example) {
+                document.getElementById('exampleInput').value = data.example;
             }
+        } else {
+            alert("翻譯服務回應異常。");
+        }
+    } catch (error) {
+        console.error("翻譯連線錯誤:", error);
+        alert("連線失敗，請確認後端服務是否正常。");
+    } finally {
+        translateBtn.innerText = originalText;
+        translateBtn.disabled = false;
+    }
+}
 
-            const payload = { username, word, part, meaning, example, folder_name };
-
-            try {
-                const response = await fetch(`${API_URL}/api/add_vocabulary`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    alert(`成功加入字卡到資料夾 [${folder_name}]！`);
-                    // 重新整理頁面上的資料夾清單並清空欄位
-                    document.getElementById('wordInput').value = '';
-                    document.getElementById('meaningInput').value = '';
-                    document.getElementById('exampleInput').value = '';
-                    document.getElementById('newFolderInput').value = '';
-                    await loadExistingFolders();
-                } else {
-                    alert("新增失敗，請檢查後端日誌。");
-                }
-            } catch (error) {
-                alert("連端失敗，請確認網路或後端服務是否正常。");
-            }
+        function logout() {
+            localStorage.removeItem('toeic_username');
+            window.location.href = "/";
         }
 
         // 初始化
