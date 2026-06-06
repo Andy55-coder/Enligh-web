@@ -9,8 +9,7 @@ from firebase_admin import credentials, firestore
 # 1. 告訴 Flask 去外層找 HTML 與 CSS
 # ==========================================
 base_dir = os.path.dirname(os.path.abspath(__file__))
-root_dir = os.getcwd()
-template_dir = os.path.join(root_dir, 'frontend')
+template_dir = os.path.join(base_dir, 'frontend')
 
 app = Flask(__name__, template_folder=template_dir)
 CORS(app)
