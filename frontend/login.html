@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多益學習系統 - 登入</title>
+    <style>
+        :root { --primary: #22c55e; --dark: #0f172a; --bg: #f8fafc; }
+        body { font-family: "Microsoft JhengHei", sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 400px; box-sizing: border-box; }
+        .login-card h2 { margin-top: 0; color: var(--dark); text-align: center; margin-bottom: 25px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #475569; }
+        .form-control { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; box-sizing: border-box; outline: none; transition: 0.2s; }
+        .form-control:focus { border-color: var(--primary); }
+        .btn-submit { background: var(--primary); color: white; border: none; width: 100%; padding: 14px; font-size: 1.1rem; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+        .btn-submit:hover { background: #16a34a; }
+        .toggle-mode { text-align: center; margin-top: 20px; color: #64748b; font-size: 0.95rem; }
+        .toggle-mode span { color: #3b82f6; cursor: pointer; font-weight: bold; text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <h2 id="formTitle">帳號登入</h2>
+        
+        <div class="form-group">
+            <label>使用者帳號</label>
+            <input type="text" id="username" class="form-control" placeholder="請輸入帳號">
+        </div>
+        
+        <div class="form-group">
+            <label>密碼</label>
+            <input type="password" id="password" class="form-control" placeholder="請輸入密碼">
+        </div>
+        
+        <button class="btn-submit" id="actionBtn" onclick="handleAuth()">登入系統</button>
+        
+        <div class="toggle-mode" id="toggleText">
+            沒有帳號？ <span onclick="switchMode(true)">立即註冊</span>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "";
+        let isRegisterMode = false;
+
+        function switchMode(toRegister) {
+            isRegisterMode = toRegister;
+            document.getElementById('formTitle').innerText = toRegister ? "建立新帳號" : "帳號登入";
+            document.getElementById('actionBtn').innerText = toRegister ? "註冊新帳號" : "登入系統";
+            document.getElementById('toggleText').innerHTML = toRegister ? 
+                `已有帳號？ <span onclick="switchMode(false)">返回登入</span>` : 
+                `沒有帳號？ <span onclick="switchMode(true)">立即註冊</span>`;
+        }
+
+        async function handleAuth() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            if (!username || !password) {
+                return alert("請填寫完整的帳號與密碼！");
+            }
+
+            const endpoint = isRegisterMode ? "/api/register" : "/api/login";
+
+            try {
+                const response = await fetch(`${API_URL}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(result.msg);
+                    if (!isRegisterMode) {
+                        // 登入成功，將帳號記在 localStorage
+                        localStorage.setItem('toeic_username', username);
+                        window.location.href = "index.html"; // 跳轉至主頁面
+                    } else {
+                        // 註冊成功，自動切換回登入模式
+                        switchMode(false);
+                    }
+                } else {
+                    alert("❌ " + result.msg);
+                }
+            } catch (error) {
+                alert("連線後端 API 失敗，請確認 app.py 是否啟動。");
+            }
+        }
+    </script>
+</body>
+</html>
