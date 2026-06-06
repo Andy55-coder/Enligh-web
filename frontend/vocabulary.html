@@ -48,7 +48,12 @@
     </div>
 
     <div class="dashboard">
-        <div class="user-stats">單字字卡學習模式</div>
+        <div class="user-stats">
+            學習模式：
+            <select id="folderFilter" onchange="switchFolder()" style="padding: 6px 12px; font-size: 1rem; border-radius: 6px; border: 2px solid #e2e8f0; outline: none; font-weight: bold; color: var(--dark); cursor: pointer;">
+                <option value="總單字卡">📚 總單字卡（系統百大）</option>
+            </select>
+        </div>
         <div class="user-stats" id="totalCountDisplay">字卡總數: 載入中...</div>
     </div>
 
@@ -81,6 +86,38 @@
         let vocabularyList = [];
         let currentIndex = 0;
 
+        async function loadFolderList(username) {
+            try {
+                const response = await fetch(`${API_URL}/api/get_folders?username=${username}`);
+                if (response.ok) {
+                    const folders = await response.json();
+                    const filter = document.getElementById('folderFilter');
+                    filter.innerHTML = '';
+                    
+                    // 「總單字卡」置頂
+                    const defaultOpt = document.createElement('option');
+                    defaultOpt.value = "總單字卡";
+                    defaultOpt.innerText = "📚 總單字卡（系統百大）";
+                    filter.appendChild(defaultOpt);
+                    
+                    folders.forEach(folder => {
+                        if (folder !== "總單字卡" && folder.trim() !== "") {
+                            const opt = document.createElement('option');
+                            opt.value = folder;
+                            opt.innerText = `📁 ${folder}`;
+                            filter.appendChild(opt);
+                        }
+                    });
+                }
+            } catch(e) { 
+                console.error("無法載入看字卡頁面的資料夾選單:", e); 
+            }
+        }
+
+        async function switchFolder() {
+            await loadVocabulary();
+        }
+
         async function loadVocabulary() {
             const username = localStorage.getItem('toeic_username');
             if (!username) {
@@ -88,8 +125,15 @@
                 return;
             }
 
+            const filter = document.getElementById('folderFilter');
+            if (filter.options.length <= 1 && filter.options[0]?.value === "總單字卡") {
+                await loadFolderList(username);
+            }
+
+            const selectedFolder = filter.value;
+
             try {
-                const response = await fetch(`${API_URL}/api/vocabulary?username=${username}`);
+                const response = await fetch(`${API_URL}/api/vocabulary?username=${username}&folder_name=${encodeURIComponent(selectedFolder)}`);
                 if (!response.ok) throw new Error("無法取得單字庫");
                 vocabularyList = await response.json();
                 
@@ -99,8 +143,14 @@
                     currentIndex = 0;
                     renderCard();
                 } else {
-                    document.getElementById('frontWord').innerText = "字卡庫為空";
-                    document.getElementById('backMeaning').innerText = "請先前往新增字卡";
+                    document.getElementById('flashcard').classList.remove('flipped');
+                    document.getElementById('partDisplay').innerHTML = '⚠️ 提示';
+                    document.getElementById('frontWord').innerText = "此資料夾為空";
+                    document.getElementById('backMeaning').innerText = "尚未建立單字";
+                    document.getElementById('backExample').innerText = "請先前往「➕ 新增單字卡」頁面，加入新字卡到這個資料夾。";
+                    document.getElementById('progressDisplay').innerText = "0 / 0";
+                    document.getElementById('prevBtn').disabled = true;
+                    document.getElementById('nextBtn').disabled = true;
                 }
             } catch (error) {
                 alert("後端單字庫連線失敗，請確認後端 app.py 是否已啟動。");
@@ -113,17 +163,16 @@
             const current = vocabularyList[currentIndex];
             
             let partHtml = current.part || 'n.';
-            if (current.type === 'private') {
-                partHtml += ' <span style="background:#fef08a; color:#854d0e; font-size:0.9rem; padding:2px 8px; border-radius:12px; margin-left:10px;">⭐ 我的專屬字卡</span>';
+            if (current.folder_name && current.folder_name !== "總單字卡") {
+                partHtml += ` <span style="background:#fef08a; color:#854d0e; font-size:0.9rem; padding:2px 8px; border-radius:12px; margin-left:10px;">⭐ ${current.folder_name}</span>`;
             }
             
             document.getElementById('partDisplay').innerHTML = partHtml;
-            // 優先抓取舊版欄位，如果沒有，就去抓 Excel 匯入的標題欄位
+            
             const wordText = current.word || current['單字 (Word)'];
             const meaningText = current.meaning || current['中文意思 (Meaning)'];
             const exampleText = current.example || current['例句 (Example Sentence)'] || '無提供例句。';
 
-            // 更新到畫面上
             document.getElementById('frontWord').innerText = wordText;
             document.getElementById('backMeaning').innerText = meaningText;
             document.getElementById('backExample').innerText = exampleText;
@@ -133,11 +182,13 @@
         }
 
         function flipCard() {
+            if (vocabularyList.length === 0) return;
             document.getElementById('flashcard').classList.toggle('flipped');
         }
 
         function pronounceWord(event) {
             event.stopPropagation();
+            if (vocabularyList.length === 0) return;
             const current = vocabularyList[currentIndex];
             const word = current.word || current['單字 (Word)'];
             if (!word) return;
@@ -149,6 +200,7 @@
         }
 
         function changeCard(direction) {
+            if (vocabularyList.length === 0) return;
             currentIndex += direction;
             if (currentIndex < 0) currentIndex = 0;
             if (currentIndex >= vocabularyList.length) currentIndex = vocabularyList.length - 1;

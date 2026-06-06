@@ -15,13 +15,13 @@ app = Flask(__name__, template_folder=template_dir)
 CORS(app) 
 
 # ==========================================
-# 2. 讀取金鑰 (支援 Vercel 與本地端)
+# 2. 讀取金鑰 (支援 Vercel 與本地端，已修正崩潰防呆)
 # ==========================================
 firebase_credentials = os.environ.get('FIREBASE_SERVICE_ACCOUNT')
 
 if firebase_credentials:
     try:
-        # 【重要修正】清理字串前後空白，並強制將隱形換行符號（\\n）替換為標準的真實換行（\n）
+        # 清理字串前後空白，並強制將隱形換行符號（\\n）替換為標準的真實換行（\n）
         cleaned_credentials = firebase_credentials.strip()
         if "\\n" in cleaned_credentials:
             cleaned_credentials = cleaned_credentials.replace("\\n", "\n")
@@ -204,35 +204,60 @@ def check_answer():
     else:
         return jsonify({"correct": False, "msg": "答錯囉！"}), 200
 
-# --- API：取得單字卡資料 (全域百大 + 個人專屬) ---
-@app.route('/api/vocabulary', methods=['GET'])
-def get_vocabulary():
+# --- 🛠️ 修改：取得資料夾清單 (強制包含並置頂「總單字卡」) ---
+@app.route('/api/get_folders', methods=['GET'])
+def get_folders():
     try:
-        username = request.args.get('username')
-        words = []
+        username = request.args.get('username', '').strip()
         
-        # 1. 取得全域百大單字
-        docs = db.collection("vocabulary").stream()
-        for doc in docs:
-            data = doc.to_dict()
-            data['id'] = doc.id
-            data['type'] = 'global'
-            words.append(data)
-            
-        # 2. 取得使用者專屬單字 (子集合)
+        # 使用 set 集合過濾掉重複的資料夾名稱，並強制加入「總單字卡」
+        folders = set()
+        folders.add("總單字卡")
+        
         if username:
             user_words_ref = db.collection("users").document(username).collection("my_words").stream()
             for doc in user_words_ref:
                 data = doc.to_dict()
+                folder = data.get('folder_name', '').strip()
+                if folder:
+                    folders.add(folder)
+            
+        return jsonify(list(folders)), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# --- 🛠️ 修改：取得單字卡資料 (全面支援分流：總單字卡 VS 獨立資料夾) ---
+@app.route('/api/vocabulary', methods=['GET'])
+def get_vocabulary():
+    try:
+        username = request.args.get('username', '').strip()
+        folder_name = request.args.get('folder_name', '').strip()
+        words = []
+        
+        # 狀況 A：如果前端有傳特定的自訂資料夾名稱，而且不是預設的 "總單字卡"
+        if username and folder_name and folder_name != "總單字卡":
+            user_words_ref = db.collection("users").document(username).collection("my_words")\
+                               .where('folder_name', '==', folder_name).stream()
+            for doc in user_words_ref:
+                data = doc.to_dict()
                 data['id'] = doc.id
                 data['type'] = 'private'
+                words.append(data)
+                
+        # 狀況 B：如果前端沒有帶 folder_name，或是指定看 "總單字卡"，就撈出系統全域百大單字
+        else:
+            docs = db.collection("vocabulary").stream()
+            for doc in docs:
+                data = doc.to_dict()
+                data['id'] = doc.id
+                data['type'] = 'global'
                 words.append(data)
 
         return jsonify(words), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# --- API：儲存自訂單字卡 (存入個人的子集合) ---
+# --- 🛠️ 修改：儲存自訂單字卡 (防呆支援：未填寫資料夾時自動歸類到總單字卡) ---
 @app.route('/api/vocabulary', methods=['POST'])
 def add_vocabulary():
     try:
@@ -242,6 +267,11 @@ def add_vocabulary():
         part = data.get('part', '').strip()
         meaning = data.get('meaning', '').strip()
         example = data.get('example', '').strip()
+        folder_name = data.get('folder_name', '').strip() 
+
+        # 如果前端沒有傳資料夾名稱，或是傳空字串，一律預設為「總單字卡」
+        if not folder_name:
+            folder_name = "總單字卡"
 
         if not username:
             return jsonify({"error": "未登入，無法新增專屬單字"}), 401
@@ -252,10 +282,11 @@ def add_vocabulary():
             "word": word, 
             "part": part if part else "n.", 
             "meaning": meaning, 
-            "example": example if example else ""
+            "example": example if example else "",
+            "folder_name": folder_name  # 新增資料夾欄位儲存於 Firestore 內
         }
         
-        # 存入 users -> {username} -> my_words
+        # 一律存入使用者的私有子集合中
         db.collection("users").document(username).collection("my_words").document().set(new_vocab)
         return jsonify({"success": True}), 201
     except Exception as e:
