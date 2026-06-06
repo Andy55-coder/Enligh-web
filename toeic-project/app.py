@@ -253,5 +253,12 @@ def add_vocabulary():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# 讓 Vercel 可以抓到這個 app 物件
+app = Flask(__name__, template_folder=template_dir)
+CORS(app)
+
+# ... (中間 API 保持不變) ...
+
+# 移除或修改 __main__ 判斷，確保本地測試可用，但上線由 Vercel 接管
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
