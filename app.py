@@ -20,8 +20,17 @@ CORS(app)
 firebase_credentials = os.environ.get('FIREBASE_SERVICE_ACCOUNT')
 
 if firebase_credentials:
-    cred_dict = json.loads(firebase_credentials)
-    cred = credentials.Certificate(cred_dict)
+    try:
+        # 【重要修正】清理字串前後空白，並強制將隱形換行符號（\\n）替換為標準的真實換行（\n）
+        cleaned_credentials = firebase_credentials.strip()
+        if "\\n" in cleaned_credentials:
+            cleaned_credentials = cleaned_credentials.replace("\\n", "\n")
+            
+        cred_dict = json.loads(cleaned_credentials, strict=False)
+        cred = credentials.Certificate(cred_dict)
+    except Exception as json_err:
+        # 如果 JSON 真的嚴重損壞，會在這裡直接拋出清楚的錯誤，讓你在 Vercel Logs 一眼看懂
+        raise RuntimeError(f"Firebase 環境變數 JSON 解析失敗，請檢查格式。錯誤訊息: {str(json_err)}")
 else:
     # 現在金鑰也跟 app.py 放在同一層了
     key_path = os.path.join(base_dir, "serviceAccountKey.json")
