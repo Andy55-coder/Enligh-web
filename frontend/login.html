@@ -78,7 +78,7 @@
                     if (!isRegisterMode) {
                         // 登入成功，將帳號記在 localStorage
                         localStorage.setItem('toeic_username', username);
-                        window.location.href = "index.html"; // 跳轉至主頁面
+                        window.location.href = "/index"; // 跳轉至主頁面
                     } else {
                         // 註冊成功，自動切換回登入模式
                         switchMode(false);
