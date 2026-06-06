@@ -36,9 +36,9 @@
 <body>
 
     <div class="nav-bar">
-        <a href="index.html">文法特訓</a>
-        <a href="vocabulary.html">單字字卡</a>
-        <a href="add_vocabulary.html" class="active">➕ 新增單字卡</a>
+        <a href="/index">文法特訓</a>
+        <a href="/vocabulary">單字字卡</a>
+        <a href="/add_vocabulary" class="active">➕ 新增單字卡</a>
     </div>
 
     <div class="dashboard">
@@ -113,7 +113,7 @@
             const username = localStorage.getItem('toeic_username');
             if (!username) {
                 alert("請先登入系統才能建立專屬字卡！");
-                window.location.href = "login.html";
+                window.location.href = "/";
                 return;
             }
 

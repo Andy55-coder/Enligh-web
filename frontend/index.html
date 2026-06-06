@@ -55,9 +55,9 @@
 
     <div class="nav-bar">
         <div class="nav-links">
-            <a href="index.html" class="active">文法特訓</a>
-            <a href="vocabulary.html">單字字卡</a>
-            <a href="add_vocabulary.html">➕ 新增單字卡</a>
+            <a href="/index" class="active">文法特訓</a>
+            <a href="/vocabulary">單字字卡</a>
+            <a href="/add_vocabulary">➕ 新增單字卡</a>
         </div>
         <button class="btn-logout" onclick="logout()">登出</button>
     </div>
@@ -100,7 +100,7 @@
         async function initSystem() {
             currentUsername = localStorage.getItem('toeic_username');
             if (!currentUsername) {
-                window.location.href = "login.html"; 
+                window.location.href = "/"; 
                 return;
             }
             document.getElementById('usernameDisplay').innerText = currentUsername;
@@ -350,7 +350,7 @@
 
         function logout() {
             localStorage.removeItem('toeic_username'); 
-            window.location.href = "login.html"; 
+            window.location.href = "/"; 
         }
 
         window.onload = initSystem;

@@ -42,9 +42,9 @@
 <body>
 
     <div class="nav-bar">
-        <a href="index.html">文法特訓</a>
-        <a href="vocabulary.html" class="active">單字字卡</a>
-        <a href="add_vocabulary.html">➕ 新增單字卡</a>
+        <a href="/index">文法特訓</a>
+        <a href="/vocabulary" class="active">單字字卡</a>
+        <a href="/add_vocabulary">➕ 新增單字卡</a>
     </div>
 
     <div class="dashboard">
@@ -84,7 +84,7 @@
         async function loadVocabulary() {
             const username = localStorage.getItem('toeic_username');
             if (!username) {
-                window.location.href = "login.html"; 
+                window.location.href = "/"; 
                 return;
             }
 
@@ -138,7 +138,8 @@
 
         function pronounceWord(event) {
             event.stopPropagation();
-            const word = vocabularyList[currentIndex].word;
+            const current = vocabularyList[currentIndex];
+            const word = current.word || current['單字 (Word)'];
             if (!word) return;
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(word);
