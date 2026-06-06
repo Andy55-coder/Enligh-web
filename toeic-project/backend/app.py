@@ -9,11 +9,11 @@ from firebase_admin import credentials, firestore
 # 1. 告訴 Flask 去外層找 HTML 與 CSS
 # ==========================================
 base_dir = os.path.dirname(os.path.abspath(__file__))
-template_dir = os.path.join(base_dir, '..', 'frontend')
-static_dir = os.path.join(base_dir, '..', 'static')
+root_dir = os.getcwd()
+template_dir = os.path.join(root_dir, 'frontend')
 
-app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
-CORS(app) 
+app = Flask(__name__, template_folder=template_dir)
+CORS(app)
 
 # ==========================================
 # 2. 讀取金鑰，連線至 Firestore (支援 Vercel 與本地端)
